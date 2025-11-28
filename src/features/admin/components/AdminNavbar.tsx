@@ -136,7 +136,7 @@ const AdminNavbar = () => {
         ref={headerRef}
         className="sticky top-0 z-100 border-b border-gray-200 bg-white/95 backdrop-blur"
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-2">
             <Trees strokeWidth={2.5} className="h-5 w-5 text-brand-600" />
             <h1 className="text-lg font-medium text-gray-900">Admin Panel</h1>
@@ -161,7 +161,7 @@ const AdminNavbar = () => {
             </nav>
             <div className='relative hidden lg:block'>
               <div 
-              className='flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white hover:cursor-pointer'
+              className='flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white hover:cursor-pointer'
               onClick={() => setProfileMenuOpen((prev) => !prev)}
               >
                 {profile.name ? profile.name.charAt(0).toUpperCase() : '?'}

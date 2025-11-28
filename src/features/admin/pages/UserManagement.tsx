@@ -916,6 +916,7 @@ const UserManagement = () => {
                 onChange={(event) => setAddForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="Jane Doe"
                 disabled={addUserLoading}
+                className='border border-gray-300'
               />
             </Field>
             <Field>
@@ -927,6 +928,7 @@ const UserManagement = () => {
                 onChange={(event) => setAddForm((prev) => ({ ...prev, email: event.target.value }))}
                 placeholder="user@example.com"
                 disabled={addUserLoading}
+                className='border border-gray-300'
               />
             </Field>
             <Field>
@@ -938,6 +940,7 @@ const UserManagement = () => {
                 onChange={(event) => setAddForm((prev) => ({ ...prev, password: event.target.value }))}
                 placeholder="Set an account password"
                 disabled={addUserLoading}
+                className='border border-gray-300'
               />
             </Field>
             <Field>
