@@ -187,6 +187,7 @@ export const buildFeatureCollection = (roads: RoadRow[]): GeoJSON.FeatureCollect
           id: featureId,
           highway: r.highway,
           name: r.name,
+          tipe_jalan: r.tipe_jalan,
           ...((r.props ?? {}) as Record<string, any>),
         },
       };

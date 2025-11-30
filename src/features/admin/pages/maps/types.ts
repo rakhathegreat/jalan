@@ -10,6 +10,7 @@ export type RoadRow = {
   kota: string | null;
   kecamatan: string | null;
   kelurahan: string | null;
+  tipe_jalan: string | null;
   rt: number | null;
   rw: number | null;
   lingkungan: string | null;

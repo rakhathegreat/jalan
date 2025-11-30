@@ -134,6 +134,8 @@ const Maps = () => {
   const selectedRoadIdRef = useRef<string | null>(null);
   const roadsDataRef = useRef<RoadRow[]>([]);
   const hoverEnabledRef = useRef(false);
+  const highlightSuppressedRef = useRef(false);
+  const skipRoadClickRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchTermRef = useRef('');
   const [roads, setRoads] = useState<RoadRow[]>([]);
@@ -175,6 +177,12 @@ const Maps = () => {
   const findRoadById = (id: string) =>
     roadsDataRef.current.find((item) => normalizeId(item.id) === id) ?? null;
 
+  const applyHighlight = (map: Map | null, roadId: string | null) => {
+    if (!map) return;
+    if (roadId && highlightSuppressedRef.current) return;
+    setHighlightFilter(map, roadId);
+  };
+
   const focusRoad = (road: RoadRow, options?: { highlight?: boolean }) => {
     const map = mapRef.current;
     if (!map || !road.geom) return;
@@ -192,7 +200,8 @@ const Maps = () => {
     selectedRoadIdRef.current = id;
     setActiveRoad(road);
     const shouldHighlight = options?.highlight !== false;
-    setHighlightFilter(map, shouldHighlight ? id : null);
+    highlightSuppressedRef.current = !shouldHighlight;
+    applyHighlight(map, shouldHighlight ? id : null);
   };
 
   const focusRoadById = (
@@ -256,7 +265,8 @@ const Maps = () => {
         selectedRoadIdRef.current = null;
         setActiveReportId(null);
         setActiveRoad(null);
-        setHighlightFilter(map, null);
+        highlightSuppressedRef.current = false;
+        applyHighlight(map, null);
         map.getCanvas().style.cursor = '';
       }
       return next;
@@ -298,9 +308,9 @@ const Maps = () => {
         if (!searchTermRef.current.trim() && !selectedRoadIdRef.current) {
           hoveredRoadIdRef.current = null;
           setActiveRoad(null);
-          setHighlightFilter(map, null);
-        } else if (selectedRoadIdRef.current) {
-          setHighlightFilter(map, selectedRoadIdRef.current);
+          applyHighlight(map, null);
+        } else if (selectedRoadIdRef.current && !highlightSuppressedRef.current) {
+          applyHighlight(map, selectedRoadIdRef.current);
         }
         map.getCanvas().style.cursor = '';
       };
@@ -313,8 +323,8 @@ const Maps = () => {
         const feature = e.features?.[0];
         if (!feature) return;
 
-        if (selectedRoadIdRef.current) {
-          setHighlightFilter(map, selectedRoadIdRef.current);
+        if (selectedRoadIdRef.current && !highlightSuppressedRef.current) {
+          applyHighlight(map, selectedRoadIdRef.current);
           map.getCanvas().style.cursor = 'pointer';
           return;
         }
@@ -328,13 +338,18 @@ const Maps = () => {
 
         if (hoveredRoadIdRef.current !== featureId) {
           hoveredRoadIdRef.current = featureId;
-          setHighlightFilter(map, featureId);
+          applyHighlight(map, featureId);
         }
 
         map.getCanvas().style.cursor = 'pointer';
       };
 
       const handleClick = (e: MapLayerMouseEvent) => {
+        if (skipRoadClickRef.current) {
+          skipRoadClickRef.current = false;
+          return;
+        }
+
         if (!hoverEnabledRef.current) return;
         const feature = e.features?.[0];
         if (!feature) return;
@@ -352,13 +367,14 @@ const Maps = () => {
         const nextValue = name || highway || featureId;
 
         const road = findRoadById(featureId);
+        highlightSuppressedRef.current = false;
         selectedRoadIdRef.current = featureId;
         hoveredRoadIdRef.current = featureId;
         searchTermRef.current = nextValue;
         setSearchTerm(nextValue);
         if (road) setActiveRoad(road);
 
-        setHighlightFilter(map, featureId);
+        applyHighlight(map, featureId);
       };
 
       map.on('mousemove', 'roads-hit', handleHover);
@@ -383,6 +399,12 @@ const Maps = () => {
           setActiveReportId(reportId);
         }
 
+        highlightSuppressedRef.current = true;
+        applyHighlight(map, null);
+        skipRoadClickRef.current = true;
+        window.setTimeout(() => {
+          skipRoadClickRef.current = false;
+        }, 0);
         focusRoadById(roadId, { highlight: false });
       };
 
@@ -408,7 +430,7 @@ const Maps = () => {
     const loadRoads = async () => {
       const { data, error } = await supabase
         .from('roads')
-        .select('id, geom, highway, name, props, kota, kecamatan, kelurahan, lingkungan, rt, rw, condition, status, length, width, osm_id');
+        .select('id, geom, highway, name, props, kota, kecamatan, kelurahan, tipe_jalan, lingkungan, rt, rw, condition, status, length, width, osm_id');
 
       if (cancelled) return;
 
@@ -573,7 +595,8 @@ const Maps = () => {
         selectedRoadIdRef.current = null;
         setActiveReportId(null);
         setActiveRoad(null);
-        setHighlightFilter(map, null);
+        highlightSuppressedRef.current = false;
+        applyHighlight(map, null);
       }
     }
   }, [filteredRoads, mapReady]);
@@ -614,10 +637,11 @@ const Maps = () => {
 
   const clearHighlight = () => {
     const map = mapRef.current;
-    if (map) setHighlightFilter(map, null);
+    if (map) applyHighlight(map, null);
   };
 
   const handleCloseDetail = () => {
+    highlightSuppressedRef.current = false;
     selectedRoadIdRef.current = null;
     setActiveReportId(null);
     setActiveRoad(null);

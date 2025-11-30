@@ -28,6 +28,16 @@ const ROAD_TYPE_OPTIONS: FilterOption[] = [
   { value: 'desa', label: 'Desa' },
 ];
 
+const CONDITION_OPTIONS: FilterOption[] = [
+  { value: 'good', label: 'Good' },
+  { value: 'minor damage', label: 'Minor damage' },
+  { value: 'severe damage', label: 'Severe damage' },
+];
+
+const CONDITION_VALUES = new Set(CONDITION_OPTIONS.map((option) => option.value));
+
+const KELURAHAN_OPTIONS: FilterOption[] = [{ value: 'banjar', label: 'Banjar' }];
+
 const createInitialFilters = (): RoadFilters => ({
   condition: [],
   status: [],
@@ -64,11 +74,25 @@ const buildOptions = (
     .sort((a, b) => a.label.localeCompare(b.label, 'id', { sensitivity: 'base' }));
 };
 
-const matchesFilter = (selected: string[], candidate: string | number | null) => {
+const matchesSelected = (selected: string[], candidate: string | null) => {
   if (!selected.length) return true;
+  if (!candidate) return false;
+  return selected.includes(candidate);
+};
+
+const normalizeCandidate = (candidate: string | number | null | undefined) => {
   const normalized = normalizeFilterValue(candidate);
-  if (!normalized) return false;
-  return selected.includes(normalized);
+  return normalized || null;
+};
+
+const normalizeConditionValue = (value: string | number | null | undefined) => {
+  const normalized = normalizeCandidate(value);
+  if (!normalized) return null;
+
+  const cleaned = normalized.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (CONDITION_VALUES.has(cleaned)) return cleaned;
+
+  return normalized;
 };
 
 const getRoadType = (road: RoadRow) =>
@@ -82,34 +106,49 @@ export const useFilters = (roads: RoadRow[]) => {
 
   const filterOptions = useMemo<FilterOptions>(
     () => ({
-      condition: buildOptions(roads, (road) => road.condition),
+      condition: CONDITION_OPTIONS,
       status: buildOptions(roads, (road) => road.status),
-      kelurahan: buildOptions(roads, (road) => road.kelurahan),
+      kelurahan: KELURAHAN_OPTIONS,
       jenisJalan: buildOptions(roads, (road) => road.highway),
       tipeJalan: ROAD_TYPE_OPTIONS,
     }),
     [roads]
   );
 
+  const normalizedRoads = useMemo(
+    () =>
+      roads.map((road) => ({
+        road,
+        condition: normalizeConditionValue(road.condition),
+        status: normalizeCandidate(road.status),
+        kelurahan: normalizeCandidate(road.kelurahan),
+        jenisJalan: normalizeCandidate(road.highway),
+        tipeJalan: normalizeCandidate(getRoadType(road)),
+        rt: normalizeCandidate(
+          road.rt === null || road.rt === undefined ? null : String(road.rt)
+        ),
+        rw: normalizeCandidate(
+          road.rw === null || road.rw === undefined ? null : String(road.rw)
+        ),
+      })),
+    [roads]
+  );
+
   const filteredRoads = useMemo(
     () =>
-      roads.filter(
-        (road) =>
-          matchesFilter(filters.condition, road.condition) &&
-          matchesFilter(filters.status, road.status) &&
-          matchesFilter(filters.kelurahan, road.kelurahan) &&
-          matchesFilter(filters.jenisJalan, road.highway) &&
-          matchesFilter(filters.tipeJalan, getRoadType(road)) &&
-          matchesFilter(
-            filters.rt,
-            road.rt === null || road.rt === undefined ? null : String(road.rt)
-          ) &&
-          matchesFilter(
-            filters.rw,
-            road.rw === null || road.rw === undefined ? null : String(road.rw)
-          )
-      ),
-    [filters, roads]
+      normalizedRoads
+        .filter(
+          ({ condition, status, kelurahan, jenisJalan, tipeJalan, rt, rw }) =>
+            matchesSelected(filters.condition, condition) &&
+            matchesSelected(filters.status, status) &&
+            matchesSelected(filters.kelurahan, kelurahan) &&
+            matchesSelected(filters.jenisJalan, jenisJalan) &&
+            matchesSelected(filters.tipeJalan, tipeJalan) &&
+            matchesSelected(filters.rt, rt) &&
+            matchesSelected(filters.rw, rw)
+        )
+        .map(({ road }) => road),
+    [filters, normalizedRoads]
   );
 
   const hasActiveFilters = useMemo(

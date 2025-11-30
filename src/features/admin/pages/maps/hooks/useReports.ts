@@ -23,7 +23,7 @@ export const useReports = (roadId: string | null, enabled: boolean) => {
 
       const { data, error } = await supabase
         .from('reports')
-        .select('id, user_id, kerusakan_level, deskripsi, status, foto, kontak_pelapor, created_at, updated_at, road_id, latitude, longitude')
+        .select('id, user_id, kerusakan_level, deskripsi, status, kontak_pelapor, created_at, updated_at, road_id, latitude, longitude')
         .eq('road_id', roadId)
         .order('created_at', { ascending: false });
 
