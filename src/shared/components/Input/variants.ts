@@ -6,9 +6,9 @@ export const inputVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-white border-gray-300 text-gray-900 focus-visible:border-brand-500 focus-visible:ring-brand-200',
+          'bg-white border-gray-300 text-gray-900 focus-visible:border-gray-500 focus-visible:ring-gray-300',
         subtle:
-          'bg-brand-50 border-transparent text-brand-900 focus-visible:border-brand-400 focus-visible:ring-brand-100',
+          'bg-brand-50 border-transparent text-brand-900 focus-visible:border-brand-400 focus-visible:ring-gray-100',
       },
       size: {
         sm: 'px-3 py-2.5 text-sm',

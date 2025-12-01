@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, MapPin, TriangleAlert, ChevronLeft, ChevronRight, Route, EllipsisVertical } from 'lucide-react';
 import Input from '@shared/components/Input';
 import { cn } from '@shared/lib/cn';
@@ -118,6 +118,7 @@ const emptyRoadForm: RoadEditForm = {
 
 const DataManagement = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [tableView, setTableView] = useState<TableView>('roads');
   const [roads, setRoads] = useState<RoadRow[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
@@ -137,6 +138,7 @@ const DataManagement = () => {
   const [editForm, setEditForm] = useState<RoadEditForm>(emptyRoadForm);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [pendingEditRoadId, setPendingEditRoadId] = useState<string | null>(null);
 
   const pageCount = useMemo(() => Math.max(1, Math.ceil(total / perPage)), [perPage, total]);
 
@@ -262,6 +264,14 @@ const DataManagement = () => {
       return next;
     });
   }, [reports]);
+
+  useEffect(() => {
+    const state = location.state as { editRoadId?: string | number } | null;
+    if (state?.editRoadId) {
+      setPendingEditRoadId(String(state.editRoadId));
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const start = total === 0 ? 0 : (page - 1) * perPage + 1;
   const end = Math.min(page * perPage, total);
@@ -415,35 +425,46 @@ const DataManagement = () => {
     navigate('/admin/maps');
   };
 
-  const handleEdit = (type: TableView, id: string | number) => {
-    if (type !== 'roads') {
-      alert(`Edit untuk ${type === 'roads' ? 'road' : 'report'} ${id} belum tersedia.`);
-      return;
-    }
-    const target = roads.find((road) => String(road.id) === String(id));
-    if (!target) {
-      alert('Data jalan tidak ditemukan.');
-      return;
-    }
-    setEditTarget(target);
-    setEditForm({
-      name: target.name ?? '',
-      highway: target.highway ?? '',
-      kota: target.kota ?? '',
-      kecamatan: target.kecamatan ?? '',
-      kelurahan: target.kelurahan ?? '',
-      lingkungan: target.lingkungan ?? '',
-      rt: target.rt === null || target.rt === undefined ? '' : String(target.rt),
-      rw: target.rw === null || target.rw === undefined ? '' : String(target.rw),
-      tipe_jalan: target.tipe_jalan ?? '',
-      condition: target.condition ?? '',
-      status: target.status ?? '',
-      length: target.length === null || target.length === undefined ? '' : String(target.length),
-      width: target.width === null || target.width === undefined ? '' : String(target.width),
-    });
-    setEditError(null);
-    setEditDialogOpen(true);
-  };
+  const handleEdit = useCallback(
+    (type: TableView, id: string | number) => {
+      if (type !== 'roads') {
+        alert(`Edit untuk ${type === 'roads' ? 'road' : 'report'} ${id} belum tersedia.`);
+        return;
+      }
+      const target = roads.find((road) => String(road.id) === String(id));
+      if (!target) {
+        alert('Data jalan tidak ditemukan.');
+        return;
+      }
+      setEditTarget(target);
+      setEditForm({
+        name: target.name ?? '',
+        highway: target.highway ?? '',
+        kota: target.kota ?? '',
+        kecamatan: target.kecamatan ?? '',
+        kelurahan: target.kelurahan ?? '',
+        lingkungan: target.lingkungan ?? '',
+        rt: target.rt === null || target.rt === undefined ? '' : String(target.rt),
+        rw: target.rw === null || target.rw === undefined ? '' : String(target.rw),
+        tipe_jalan: target.tipe_jalan ?? '',
+        condition: target.condition ?? '',
+        status: target.status ?? '',
+        length: target.length === null || target.length === undefined ? '' : String(target.length),
+        width: target.width === null || target.width === undefined ? '' : String(target.width),
+      });
+      setEditError(null);
+      setEditDialogOpen(true);
+    },
+    [roads]
+  );
+
+  useEffect(() => {
+    if (!pendingEditRoadId || tableView !== 'roads') return;
+    if (!roads.length) return;
+
+    handleEdit('roads', pendingEditRoadId);
+    setPendingEditRoadId(null);
+  }, [handleEdit, pendingEditRoadId, roads, tableView]);
 
   const handleBulkExport = () => {
     const selectedData =

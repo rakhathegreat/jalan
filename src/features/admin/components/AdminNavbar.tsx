@@ -9,6 +9,7 @@ import {
   Trees,
   LogOut,
   Gamepad2,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
 import { supabase } from '@shared/services/supabase';
@@ -18,12 +19,12 @@ const profileLinks = [
 ];
 
 const links = [
-  { to: '/admin/dashboard', label: 'Tree Management', icon: TreePine },
+  { to: '/admin/dashboard', label: 'Dashboard', icon: ShieldCheck },
   { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/data', label: 'Data', icon: TreePine },
   { to: '/admin/maps', label: 'Maps', icon: Gamepad2 },
-  // { to: '/admin/anti-cheat', label: 'Anti-Cheat', icon: ShieldCheck },
   // { to: '/admin/moderation', label: 'Moderation', icon: Gavel },
-  { to: '/admin/analytics', label: 'Reports', icon: BarChart3 },
+  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   // { to: '/admin/audit-log', label: 'Audit Log', icon: FileText },
 ];
 

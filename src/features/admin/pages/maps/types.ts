@@ -22,7 +22,7 @@ export type RoadRow = {
 
 export type ReportRow = {
   id: number;
-  user_id: number | null;
+  user_id: string | null;
   latitude: number | null;
   longitude: number | null;
   kerusakan_level: string | null;
@@ -33,6 +33,7 @@ export type ReportRow = {
   created_at: string | null;
   updated_at: string | null;
   road_id: string | null;
+  road_name?: string | null;
 };
 
 export type RecentSearchItem = { id: string; label: string; secondary: string };

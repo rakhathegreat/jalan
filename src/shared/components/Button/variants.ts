@@ -16,6 +16,7 @@ export const buttonVariants = cva(
         md: 'px-2 py-2 text-base',
         lg: 'px-3 py-3 text-lg',
         full: 'w-full px-5 py-3 text-lg',
+        custom: '',
       },
     },
     defaultVariants: {

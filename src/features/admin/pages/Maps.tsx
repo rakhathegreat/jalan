@@ -148,6 +148,7 @@ const Maps = () => {
   const [mapReady, setMapReady] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const {
     filters,
@@ -679,6 +680,64 @@ const Maps = () => {
     if (map) applyHighlight(map, null);
   };
 
+  const handleDeleteRoad = async () => {
+    if (!activeRoad || deleteLoading) return;
+    setDeleteLoading(true);
+
+    try {
+      const { error } = await supabase.from('roads').delete().eq('id', activeRoad.id);
+      if (error) {
+        alert(error.message || 'Gagal menghapus data jalan.');
+        return;
+      }
+
+      const normalizedId = normalizeId(activeRoad.id);
+      roadsDataRef.current = roadsDataRef.current.filter(
+        (road) => normalizeId(road.id) !== normalizedId
+      );
+      setRoads((prev) =>
+        prev.filter((road) => normalizeId(road.id) !== normalizedId)
+      );
+
+      highlightSuppressedRef.current = false;
+      selectedRoadIdRef.current = null;
+      hoveredRoadIdRef.current = null;
+      setActiveReportId(null);
+      setActiveRoad(null);
+      clearHighlight();
+
+      const map = mapRef.current;
+      if (map && map.getSource('roads')) {
+        const featureCollection = buildFeatureCollection(roadsDataRef.current);
+        syncRoadSource(map, featureCollection);
+        map.getCanvas().style.cursor = '';
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleRoadUpdated = (updatedRoad: RoadRow) => {
+    const normalizedId = normalizeId(updatedRoad.id);
+    roadsDataRef.current = roadsDataRef.current.map((road) =>
+      normalizeId(road.id) === normalizedId ? { ...road, ...updatedRoad } : road
+    );
+    setRoads((prev) =>
+      prev.map((road) =>
+        normalizeId(road.id) === normalizedId ? { ...road, ...updatedRoad } : road
+      )
+    );
+    setActiveRoad((prev) =>
+      prev && normalizeId(prev.id) === normalizedId ? { ...prev, ...updatedRoad } : prev
+    );
+
+    const map = mapRef.current;
+    if (map && map.getSource('roads')) {
+      const featureCollection = buildFeatureCollection(roadsDataRef.current);
+      syncRoadSource(map, featureCollection);
+    }
+  };
+
   const handleCloseDetail = () => {
     highlightSuppressedRef.current = false;
     selectedRoadIdRef.current = null;
@@ -722,6 +781,8 @@ const Maps = () => {
         reportsError={reportsError}
         onClose={handleCloseDetail}
         onClearHighlight={clearHighlight}
+        onRemoveRoad={handleDeleteRoad}
+        onRoadUpdated={handleRoadUpdated}
         onSelectReport={handleSelectReport}
         selectedReportId={activeReportId}
         activeReport={activeReport}
