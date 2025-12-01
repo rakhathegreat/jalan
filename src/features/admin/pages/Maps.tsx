@@ -28,6 +28,7 @@ import {
   normalizeId,
   setHighlightFilter,
 } from './maps/mapHelpers';
+import { MAP_FOCUS_STORAGE_KEY, type StoredMapFocusPayload } from './maps/mapFocus';
 import type { MapMode, RoadRow, LaporanRow, ReportRow } from './maps/types';
 
 const enable3DMode = (map: Map) => {
@@ -138,6 +139,7 @@ const Maps = () => {
   const skipRoadClickRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchTermRef = useRef('');
+  const pendingFocusRef = useRef<StoredMapFocusPayload | null>(null);
   const [roads, setRoads] = useState<RoadRow[]>([]);
   const [laporan, setLaporan] = useState<LaporanRow[]>([]);
   const [activeReportId, setActiveReportId] = useState<number | null>(null);
@@ -173,6 +175,23 @@ const Maps = () => {
   useEffect(() => {
     roadsDataRef.current = roads;
   }, [roads]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem(MAP_FOCUS_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as StoredMapFocusPayload | null;
+      if (parsed && (parsed.type === 'roads' || parsed.type === 'reports')) {
+        pendingFocusRef.current = parsed;
+      }
+      window.localStorage.removeItem(MAP_FOCUS_STORAGE_KEY);
+    } catch (err) {
+      console.warn('Failed to read map focus payload', err);
+    }
+  }, []);
 
   const findRoadById = (id: string) =>
     roadsDataRef.current.find((item) => normalizeId(item.id) === id) ?? null;
@@ -600,6 +619,26 @@ const Maps = () => {
       }
     }
   }, [filteredRoads, mapReady]);
+
+  useEffect(() => {
+    if (!mapReady) return;
+
+    const payload = pendingFocusRef.current;
+    if (!payload) return;
+
+    if (payload.type === 'roads') {
+      focusRoadById(payload.roadId, { highlight: true });
+      pendingFocusRef.current = null;
+      return;
+    }
+
+    const targetReport = laporan.find((item) => item.id === payload.reportId);
+    if (!targetReport || targetReport.road_id === null || targetReport.road_id === undefined) return;
+
+    setActiveReportId(payload.reportId);
+    focusRoadById(targetReport.road_id, { highlight: true });
+    pendingFocusRef.current = null;
+  }, [laporan, mapReady]);
 
   const activeRoadId = activeRoad ? normalizeId(activeRoad.id) : null;
   const isRoadSelected = !!activeRoadId && selectedRoadIdRef.current === activeRoadId;

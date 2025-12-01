@@ -427,11 +427,20 @@ export const DetailPanel = ({
                 <div className="flex flex-row gap-2">
                   <div className="w-full">
                     <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={onClearHighlight}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="w-full">
+                    <Button
                       variant="default"
                       className="w-full"
                       onClick={onClearHighlight}
                     >
-                      View Details
+                      Edit
                     </Button>
                   </div>
                 </div>
