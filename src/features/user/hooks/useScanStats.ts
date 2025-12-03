@@ -1,37 +1,61 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { supabase } from '@shared/services/supabase';
 
-type ScanStats = {
-  totalCount: number | null;
-  loading: boolean;
-};
-
-export const useScanStats = (userId?: string | null): ScanStats => {
+export const useScanStats = (userId?: string | null) => {
   const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let ignore = false;
-    const fetchCount = async () => {
-      setLoading(true);
-      const query = supabase.from('scan').select('*', { count: 'exact', head: true });
-      const { count, error } = userId ? await query.eq('user_id', userId) : await query;
-      if (ignore) return;
-
-      if (!error && typeof count === 'number') {
-        setTotalCount(count);
-      }
+  const load = useCallback(async () => {
+    if (!userId) {
+      setTotalCount(null);
+      setError(null);
       setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const countByColumn = async (column: 'user_id' | 'user') => {
+      const { count, error: queryError } = await supabase
+        .from('scan')
+        .select('*', { count: 'exact', head: true })
+        .eq(column, userId);
+      if (queryError) throw queryError;
+      return count ?? 0;
     };
 
-    fetchCount();
-    return () => {
-      ignore = true;
-    };
+    try {
+      let count = 0;
+      try {
+        count = await countByColumn('user_id');
+      } catch (primaryError) {
+        try {
+          count = await countByColumn('user');
+        } catch (fallbackError) {
+          const message =
+            (fallbackError as { message?: string })?.message ??
+            (primaryError as { message?: string })?.message ??
+            'Gagal memuat riwayat scan.';
+          setError(message);
+          setTotalCount(null);
+          setLoading(false);
+          return;
+        }
+      }
+      setTotalCount(count);
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
-  return { totalCount, loading };
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { totalCount, loading, error, reload: load };
 };
 
 export default useScanStats;

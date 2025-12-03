@@ -139,6 +139,7 @@ const DataManagement = () => {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [pendingEditRoadId, setPendingEditRoadId] = useState<string | null>(null);
+  const [markingReportId, setMarkingReportId] = useState<number | null>(null);
 
   const pageCount = useMemo(() => Math.max(1, Math.ceil(total / perPage)), [perPage, total]);
 
@@ -428,7 +429,7 @@ const DataManagement = () => {
   const handleEdit = useCallback(
     (type: TableView, id: string | number) => {
       if (type !== 'roads') {
-        alert(`Edit untuk ${type === 'roads' ? 'road' : 'report'} ${id} belum tersedia.`);
+        alert(`Edit untuk report ${id} belum tersedia.`);
         return;
       }
       const target = roads.find((road) => String(road.id) === String(id));
@@ -467,12 +468,15 @@ const DataManagement = () => {
   }, [handleEdit, pendingEditRoadId, roads, tableView]);
 
   const handleBulkExport = () => {
-    const selectedData =
-      tableView === 'roads'
-        ? roads.filter((road) => selectedRoadIds.has(road.id))
-        : reports.filter((report) => selectedReportIds.has(report.id));
+    const selectedRoads = roads.filter((road) => selectedRoadIds.has(road.id));
+    const selectedReports = reports.filter((report) => selectedReportIds.has(report.id));
 
-    if (selectedData.length === 0) {
+    if (tableView === 'roads' && selectedRoads.length === 0) {
+      alert('Pilih data terlebih dahulu untuk diekspor.');
+      return;
+    }
+
+    if (tableView === 'reports' && selectedReports.length === 0) {
       alert('Pilih data terlebih dahulu untuk diekspor.');
       return;
     }
@@ -494,7 +498,7 @@ const DataManagement = () => {
         'Width',
       ];
       csvRows.push(headers.join(','));
-      selectedData.forEach((road) => {
+      selectedRoads.forEach((road) => {
         const row = [
           road.name ?? '',
           road.kota ?? '',
@@ -530,7 +534,7 @@ const DataManagement = () => {
         'Updated At',
       ];
       csvRows.push(headers.join(','));
-      selectedData.forEach((report) => {
+      selectedReports.forEach((report) => {
         const row = [
           report.road_id ?? '',
           formatKerusakanLevel(report.kerusakan_level),
@@ -566,52 +570,84 @@ const DataManagement = () => {
     requestDelete(type, ids);
   };
 
-  const renderActionMenu = (type: TableView, id: string | number) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="bg-white p-0 text-gray-600"
-          aria-label="Open actions"
-        >
-          <EllipsisVertical className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        side="left"
-        className="w-44 rounded-md border border-gray-200 bg-white p-1"
-      >
-        <div className="flex flex-col">
-          <Button
-            size="custom"
-            variant="ghost"
-            className="justify-start p-2 text-sm rounded-sm text-gray-800 hover:bg-stone-100 font-normal"
-            onClick={() => handleEdit(type, id)}
-          >
-            Edit
-          </Button>
-          <Button
-            size="custom"
-            variant="ghost"
-            className="justify-start p-2 text-sm rounded-sm text-gray-800 hover:bg-stone-100 font-normal"
-            onClick={() => handleViewOnMap(type, id)}
-          >
-            View on Map
-          </Button>
+  const handleMarkReportDone = async (id: number) => {
+    setMarkingReportId(id);
+    const { error } = await supabase.from('reports').update({ status: 'done' }).eq('id', id);
+    if (error) {
+      alert(`Gagal menandai laporan selesai: ${error.message}`);
+      setMarkingReportId(null);
+      return;
+    }
+    setReports((prev) =>
+      prev.map((report) => (report.id === id ? { ...report, status: 'done' } : report))
+    );
+    setMarkingReportId(null);
+  };
+
+  const renderActionMenu = (type: TableView, id: string | number) => {
+    const report =
+      type === 'reports' ? reports.find((item) => item.id === Number(id)) : null;
+    const isDone = report ? (report.status ?? '').toLowerCase() === 'done' : false;
+    const isMarking = report ? markingReportId === report.id : false;
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
           <Button
             size="sm"
             variant="ghost"
-            className="justify-start rounded-sm text-red-700 hover:bg-red-50 font-normal"
-            onClick={() => requestDelete(type, [id])}
+            className="bg-white p-0 text-gray-600"
+            aria-label="Open actions"
           >
-            Delete
+            <EllipsisVertical className="h-4 w-4" />
           </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          side="left"
+          className="w-48 rounded-md border border-gray-200 bg-white p-1"
+        >
+          <div className="flex flex-col">
+            <Button
+              size="custom"
+              variant="ghost"
+              className="justify-start rounded-sm p-2 text-sm font-normal text-gray-800 hover:bg-stone-100"
+              onClick={() => handleEdit(type, id)}
+            >
+              Edit
+            </Button>
+            <Button
+              size="custom"
+              variant="ghost"
+              className="justify-start rounded-sm p-2 text-sm font-normal text-gray-800 hover:bg-stone-100"
+              onClick={() => handleViewOnMap(type, id)}
+            >
+              View on Map
+            </Button>
+            {type === 'reports' && (
+              <Button
+                size="custom"
+                variant="ghost"
+                disabled={isDone || isMarking}
+                className="justify-start rounded-sm p-2 text-sm font-normal text-gray-800 hover:bg-stone-100 disabled:opacity-60"
+                onClick={() => handleMarkReportDone(Number(id))}
+              >
+                {isMarking ? 'Memproses...' : 'Tandai selesai'}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="justify-start rounded-sm text-red-700 hover:bg-red-50 font-normal"
+              onClick={() => requestDelete(type, [id])}
+            >
+              Delete
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
 
   const renderBulkActionMenu = (type: TableView) => {
     const hasSelection = type === 'roads' ? selectedRoadIds.size > 0 : selectedReportIds.size > 0;
@@ -898,6 +934,15 @@ const DataManagement = () => {
               {report.deskripsi?.trim() || 'Tidak ada deskripsi'}
             </p>
             <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={(report.status ?? '').toLowerCase() === 'done' || markingReportId === report.id}
+                className="font-normal disabled:opacity-60"
+                onClick={() => handleMarkReportDone(report.id)}
+              >
+                {markingReportId === report.id ? 'Memproses...' : 'Tandai selesai'}
+              </Button>
               <Button size="sm" variant="outline" onClick={() => handleEdit('reports', report.id)}>
                 Edit
               </Button>

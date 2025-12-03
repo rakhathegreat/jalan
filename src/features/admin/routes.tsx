@@ -1,31 +1,24 @@
+import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import AdminLayout from './components/AdminLayout';
-import AddTree from './pages/AddTree';
-import AddClassification from './pages/AddClassification';
-import Analytics from './pages/Analytics';
-import Dashboard from './pages/Dashboard';
-import AuditLog from './pages/AuditLog';
-import DataManagement from './pages/DataManagement';
-import EditTree from './pages/EditTree';
-import Maps from './pages/Maps';
-import Moderation from './pages/Moderation';
-import UserManagement from './pages/UserManagement';
+import { withPageSuspense } from '@/components/page-loader';
+
+const AdminLayout = lazy(() => import('./components/AdminLayout'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const DataManagement = lazy(() => import('./pages/DataManagement'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const Maps = lazy(() => import('./pages/Maps'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 
 const adminNavigation = {
   path: '/admin',
-  element: <AdminLayout />,
+  element: withPageSuspense(<AdminLayout />),
   children: [
-    { path: 'data', element: <DataManagement /> },
-    { path: 'users', element: <UserManagement /> },
-    { path: 'maps', element: <Maps /> },
-    { path: 'dashboard', element: <Dashboard /> },
-    { path: 'moderation', element: <Moderation /> },
-    { path: 'analytics', element: <Analytics /> },
-    { path: 'audit-log', element: <AuditLog /> },
-    { path: 'add', element: <AddTree /> },
-    { path: 'classification/add', element: <AddClassification /> },
-    { path: 'edit/:id', element: <EditTree /> },
+    { path: 'dashboard', element: withPageSuspense(<Dashboard />) },
+    { path: 'data', element: withPageSuspense(<DataManagement />) },
+    { path: 'users', element: withPageSuspense(<UserManagement />) },
+    { path: 'maps', element: withPageSuspense(<Maps />) },
+    { path: 'analytics', element: withPageSuspense(<Analytics />) },
     { index: true, element: <Navigate to="dashboard" replace /> },
   ],
 };

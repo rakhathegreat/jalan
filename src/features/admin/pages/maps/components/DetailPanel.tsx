@@ -109,12 +109,8 @@ export const DetailPanel = ({
     cityLabel,
     districtLabel,
     subDistrictLabel,
-    neighbourhoodLabel,
     rtValue,
     rwValue,
-  trafficBadgeLabel,
-  onewayLabel,
-  maxSpeedLabel,
 } = roadDetails;
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -631,7 +627,7 @@ export const DetailPanel = ({
                       >
                       <DialogTrigger asChild>
                         <Button
-                          variant="default"
+                          variant="primary"
                           className="w-full"
                           onClick={handleOpenEditDialog}
                         >

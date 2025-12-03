@@ -1,4 +1,3 @@
-import maplibregl, { Map } from 'maplibre-gl';
 import type * as GeoJSON from 'geojson';
 import { RECENT_SEARCH_KEY } from './mapConfig';
 import type { RecentSearchItem, RoadRow } from './types';
@@ -26,7 +25,7 @@ export const REPORT_STATUS_META: Record<string, { label: string; className: stri
   },
   done: {
     label: 'Done',
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    className: 'border-brand-200 bg-brand-50 text-brand-700',
   },
   default: {
     label: 'Unknown',
@@ -51,19 +50,6 @@ export const extractCoordinates = (
     return geom.coordinates.flat().filter(Boolean) as [number, number][];
   }
   return [];
-};
-
-export const getBoundsFromCoordinates = (coords: [number, number][]) => {
-  if (!coords.length) return null;
-  return coords.slice(1).reduce(
-    (bounds, coord) => bounds.extend(coord),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
-};
-
-export const setHighlightFilter = (map: Map, roadId: string | null) => {
-  if (!map.getLayer('roads-highlight')) return;
-  map.setFilter('roads-highlight', ['==', ['get', 'id'], roadId ?? '']);
 };
 
 export const loadRecentSearches = (): RecentSearchItem[] => {
@@ -143,53 +129,3 @@ export const formatDistance = (meters: number | null | undefined): string => {
   if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
   return `${Math.round(meters)} m`;
 };
-
-const accumulateLineLength = (line: GeoJSON.Position[]): number => {
-  let total = 0;
-  for (let i = 1; i < line.length; i += 1) {
-    const prev = line[i - 1];
-    const curr = line[i];
-    if (!prev || !curr || prev.length < 2 || curr.length < 2) continue;
-    const from = new maplibregl.LngLat(prev[0], prev[1]);
-    const to = new maplibregl.LngLat(curr[0], curr[1]);
-    total += from.distanceTo(to);
-  }
-  return total;
-};
-
-export const calculateRoadLength = (
-  geom: GeoJSON.LineString | GeoJSON.MultiLineString | null | undefined
-): number | null => {
-  if (!geom) return null;
-  if (geom.type === 'LineString') {
-    return accumulateLineLength(geom.coordinates as GeoJSON.Position[]);
-  }
-  if (geom.type === 'MultiLineString') {
-    return geom.coordinates.reduce(
-      (total, line) => total + accumulateLineLength(line as GeoJSON.Position[]),
-      0
-    );
-  }
-  return null;
-};
-
-export const buildFeatureCollection = (roads: RoadRow[]): GeoJSON.FeatureCollection => ({
-  type: 'FeatureCollection',
-  features: roads
-    .filter((r) => r.geom)
-    .map((r) => {
-      const featureId = normalizeId(r.id);
-      return {
-        type: 'Feature',
-        id: featureId,
-        geometry: r.geom,
-        properties: {
-          id: featureId,
-          highway: r.highway,
-          name: r.name,
-          tipe_jalan: r.tipe_jalan,
-          ...((r.props ?? {}) as Record<string, any>),
-        },
-      };
-    }),
-});

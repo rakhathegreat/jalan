@@ -1,50 +1,28 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/Card';
-import Input from '@shared/components/Input';
-import Button from '@shared/components/Button';
+import { SectionCards } from './dashboard/components/SectionCards';
+import { ChartAreaInteractive } from './dashboard/components/SectionChart';
+import { DataTable } from '@/components/data-table';
+import { useDashboardData } from './dashboard/hooks/useDashboardData';
 
 const Dashboard = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Validasi Scan & Anti-Cheat</h1>
-      <p className="text-gray-500">Atur batas frekuensi, geofencing, dan deteksi anomali.</p>
-    </div>
-
-    <Card variant="solid" padding="lg">
-      <CardHeader>
-        <CardTitle>Batas Frekuensi</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2">
-        <Input label="Per QR per user (kali)" type="number" defaultValue="1" />
-        <Input label="Cooldown (menit)" type="number" defaultValue="30" />
-      </CardContent>
-    </Card>
-
-    <Card variant="solid" padding="lg">
-      <CardHeader>
-        <CardTitle>Geofencing</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2">
-        <Input label="Maksimal jarak (meter)" type="number" defaultValue="50" />
-        <div className="rounded-2xl border border-dashed border-gray-200 p-4 text-sm text-gray-600">
-          Integrasi peta koordinat akan ditampilkan di sini untuk validasi lokasi scan.
-        </div>
-      </CardContent>
-    </Card>
-
-    <Card variant="solid" padding="lg">
-      <CardHeader>
-        <CardTitle>Fingerprint & Anomali</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="rounded-2xl border border-gray-200 p-4 text-sm text-gray-600">
-          Device ID & alamat IP pengguna terakhir tercatat otomatis. Anomali (spam/jam aneh) akan muncul di sini.
-        </div>
-        <Button size="sm" variant="outline">
-          Lihat Alert Kecurangan
-        </Button>
-      </CardContent>
-    </Card>
-  </div>
+  <DashboardContent />
 );
+
+const DashboardContent = () => {
+  const { metrics, chartData, reports, loading, error, markReportDone, markingId } =
+    useDashboardData();
+
+  return (
+    <div className="flex flex-col gap-4 px-6 py-4 md:gap-6 md:py-6">
+      <SectionCards metrics={metrics} loading={loading} />
+      <ChartAreaInteractive data={chartData} loading={loading} />
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      <DataTable data={reports} loading={loading} onMarkDone={markReportDone} markingId={markingId} />
+    </div>
+  );
+};
 
 export default Dashboard;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl, { Map, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type * as GeoJSON from 'geojson';
@@ -21,13 +21,11 @@ import {
   TERRAIN_SOURCE_URL,
 } from './maps/mapConfig';
 import {
-  buildFeatureCollection,
   extractCoordinates,
-  getBoundsFromCoordinates,
   getRoadPrimaryLabel,
   normalizeId,
-  setHighlightFilter,
 } from './maps/mapHelpers';
+import { buildFeatureCollection, getBoundsFromCoordinates, setHighlightFilter } from './maps/mapGeoHelpers';
 import { MAP_FOCUS_STORAGE_KEY, type StoredMapFocusPayload } from './maps/mapFocus';
 import type { MapMode, RoadRow, LaporanRow, ReportRow } from './maps/types';
 
@@ -194,16 +192,19 @@ const Maps = () => {
     }
   }, []);
 
-  const findRoadById = (id: string) =>
-    roadsDataRef.current.find((item) => normalizeId(item.id) === id) ?? null;
-
-  const applyHighlight = (map: Map | null, roadId: string | null) => {
+  const applyHighlight = useCallback((map: Map | null, roadId: string | null) => {
     if (!map) return;
     if (roadId && highlightSuppressedRef.current) return;
     setHighlightFilter(map, roadId);
-  };
+  }, []);
 
-  const focusRoad = (road: RoadRow, options?: { highlight?: boolean }) => {
+  const findRoadById = useCallback(
+    (id: string) =>
+      roadsDataRef.current.find((item) => normalizeId(item.id) === id) ?? null,
+    []
+  );
+
+  const focusRoad = useCallback((road: RoadRow, options?: { highlight?: boolean }) => {
     const map = mapRef.current;
     if (!map || !road.geom) return;
 
@@ -222,34 +223,40 @@ const Maps = () => {
     const shouldHighlight = options?.highlight !== false;
     highlightSuppressedRef.current = !shouldHighlight;
     applyHighlight(map, shouldHighlight ? id : null);
-  };
+  }, [applyHighlight]);
 
-  const focusRoadById = (
-    roadId: string | number | null | undefined,
-    options?: { updateSearch?: boolean; highlight?: boolean }
-  ) => {
-    if (roadId === null || roadId === undefined) return;
-    const road = findRoadById(normalizeId(roadId));
-    if (!road) return;
+  const focusRoadById = useCallback(
+    (
+      roadId: string | number | null | undefined,
+      options?: { updateSearch?: boolean; highlight?: boolean }
+    ) => {
+      if (roadId === null || roadId === undefined) return;
+      const road = findRoadById(normalizeId(roadId));
+      if (!road) return;
 
-    focusRoad(road, { highlight: options?.highlight });
+      focusRoad(road, { highlight: options?.highlight });
 
-    if (options?.updateSearch !== false) {
+      if (options?.updateSearch !== false) {
+        const nextValue = getRoadPrimaryLabel(road);
+        setSearchTerm(nextValue);
+        searchTermRef.current = nextValue;
+      }
+    },
+    [findRoadById, focusRoad, setSearchTerm]
+  );
+
+  const handleSelectRoad = useCallback(
+    (road: RoadRow) => {
+      setActiveReportId(null);
+      focusRoad(road);
       const nextValue = getRoadPrimaryLabel(road);
       setSearchTerm(nextValue);
       searchTermRef.current = nextValue;
-    }
-  };
-
-  const handleSelectRoad = (road: RoadRow) => {
-    setActiveReportId(null);
-    focusRoad(road);
-    const nextValue = getRoadPrimaryLabel(road);
-    setSearchTerm(nextValue);
-    searchTermRef.current = nextValue;
-    addRecentSearch(road);
-    setSearchDialogOpen(false);
-  };
+      addRecentSearch(road);
+      setSearchDialogOpen(false);
+    },
+    [addRecentSearch, focusRoad, setSearchDialogOpen, setSearchTerm]
+  );
 
   const handleZoom = (direction: 'in' | 'out') => {
     const map = mapRef.current;
@@ -507,8 +514,10 @@ const Maps = () => {
       }));
       setLaporan(laporanList);
 
-      const reportsIcon = await map.loadImage(triangleAlert);
-      map.addImage('reports-icon', reportsIcon.data);
+      if (!map.hasImage('reports-icon')) {
+        const reportsIcon = await map.loadImage(triangleAlert);
+        map.addImage('reports-icon', reportsIcon.data);
+      }
 
       const reportFeatures: GeoJSON.Feature[] = laporanList
         .filter(
@@ -534,35 +543,42 @@ const Maps = () => {
           },
         }));
 
-      console.log(reportFeatures);
+      const reportCollection: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: reportFeatures,
+      };
 
-      map.addSource('point', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: reportFeatures,
-        },
-      });
-      ensureLayerOrder();
-      map.addLayer({
-        id: 'points',
-        type: 'symbol',
-        source: 'point',
-        layout: {
-          'icon-image': 'reports-icon',
-          'icon-size': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            12, 0.03,
-            16, 0.04,
-            18, 0.05
-          ],
-        },
-        paint: {
-          'icon-opacity': 1
-        }
-      });
+      const existingPointSource = map.getSource('point') as maplibregl.GeoJSONSource | undefined;
+      if (existingPointSource) {
+        existingPointSource.setData(reportCollection);
+      } else {
+        map.addSource('point', {
+          type: 'geojson',
+          data: reportCollection,
+        });
+      }
+
+      if (!map.getLayer('points')) {
+        map.addLayer({
+          id: 'points',
+          type: 'symbol',
+          source: 'point',
+          layout: {
+            'icon-image': 'reports-icon',
+            'icon-size': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              12, 0.03,
+              16, 0.04,
+              18, 0.05
+            ],
+          },
+          paint: {
+            'icon-opacity': 1
+          }
+        });
+      }
       ensureLayerOrder();
       detachReportInteractions?.();
       detachReportInteractions = attachReportInteractions();

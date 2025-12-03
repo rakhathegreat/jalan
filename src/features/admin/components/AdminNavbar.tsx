@@ -6,7 +6,6 @@ import {
   BarChart3,
   Menu,
   X,
-  Trees,
   LogOut,
   Gamepad2,
   ShieldCheck,
@@ -139,8 +138,7 @@ const AdminNavbar = () => {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-2">
-            <Trees strokeWidth={2.5} className="h-5 w-5 text-brand-600" />
-            <h1 className="text-lg font-medium text-gray-900">Admin Panel</h1>
+            <h1 className="text-md font-medium text-gray-900">Admin Panel</h1>
           </div>
 
           <div className='flex flex-row space-x-6'>            
@@ -152,7 +150,7 @@ const AdminNavbar = () => {
                   className={({ isActive }) =>
                     cn(
                       'inline-flex items-center gap-2 rounded-sm px-4 py-2 text-sm font-medium transition',
-                      isActive ? 'bg-brand-100 text-brand-700' : 'text-gray-600 hover:bg-gray-200'
+                      isActive ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-200'
                     )
                   }
                 >
@@ -160,9 +158,9 @@ const AdminNavbar = () => {
                 </NavLink>
               ))}
             </nav>
-            <div className='relative hidden lg:block'>
+            <div className='relative hidden lg:flex lg:items-center'>
               <div 
-              className='flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white hover:cursor-pointer'
+              className='flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white hover:cursor-pointer'
               onClick={() => setProfileMenuOpen((prev) => !prev)}
               >
                 {profile.name ? profile.name.charAt(0).toUpperCase() : '?'}

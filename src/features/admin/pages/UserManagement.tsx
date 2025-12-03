@@ -658,7 +658,7 @@ const UserManagement = () => {
                   )}
 
                   <Button
-                    variant="default"
+                    variant="primary"
                     className="inline-flex h-11 shadow-none items-center gap-2 px-4 w-full lg:w-auto hover:cursor-pointer"
                     onClick={() => {
                       setShowAddDialog(true);
@@ -1007,7 +1007,7 @@ const UserManagement = () => {
                   </DialogClose>
                   <Button
                     type="button"
-                    variant="default"
+                    variant="primary"
                     onClick={() => {
                       if (target) handleToggleSuspend(target);
                     }}

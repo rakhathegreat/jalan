@@ -1,54 +1,91 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { supabase } from '@shared/services/supabase';
 
 export type ScanHistoryItem = {
   id: string;
-  data_pohon_id: string | null;
-  created_at: string;
-  data_pohon: {
-    id: string;
-    jenis_pohon_id: string;
-    jenis_pohon: {
-      common_name: string;
-      scientific_name: string;
-    };
-  }
+  createdAt?: string | null;
+  status?: string | null;
+  label?: string;
+  treeId?: string | number | null;
+  notes?: string | null;
 };
 
-export const useScanHistory = (userId?: string | null) => {
-  const [history, setHistory] = useState<ScanHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+const buildLabel = (payload: Record<string, any>) =>
+  payload.site_name ??
+  payload.tree_name ??
+  payload.tree_id ??
+  payload.tree ??
+  payload.result ??
+  payload.status ??
+  'Scan tidak dikenal';
 
-  useEffect(() => {
-    let ignore = false;
-    const fetchHistory = async () => {
-      if (!userId) {
-        setHistory([]);
-        setLoading(false);
-        return;
+export const useScanHistory = (userId?: string | null, limit = 15) => {
+  const [items, setItems] = useState<ScanHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchHistory = useCallback(async () => {
+    if (!userId) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const loadByColumn = async (column: 'user_id' | 'user') => {
+      const query = supabase
+        .from('scan')
+        .select('*')
+        .eq(column, userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      const { data, error: queryError } = await query;
+      if (queryError) throw queryError;
+      return data ?? [];
+    };
+
+    try {
+      let data: Record<string, any>[] = [];
+      try {
+        data = await loadByColumn('user_id');
+      } catch (primaryError) {
+        try {
+          data = await loadByColumn('user');
+        } catch (fallbackError) {
+          const message =
+            (fallbackError as { message?: string })?.message ??
+            (primaryError as { message?: string })?.message ??
+            'Gagal memuat riwayat scan.';
+          setError(message);
+          setItems([]);
+          setLoading(false);
+          return;
+        }
       }
 
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('scan')
-        .select('id, data_pohon_id, created_at, data_pohon (id, jenis_pohon_id, jenis_pohon (common_name, scientific_name))')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (ignore) return;
-      if (!error && data) setHistory(data as unknown as ScanHistoryItem[]);
+      setItems(
+        data.map((item) => ({
+          id: String(item.id ?? crypto.randomUUID?.() ?? Date.now()),
+          createdAt: item.created_at ?? item.ts ?? null,
+          status: item.status ?? item.result ?? null,
+          label: buildLabel(item),
+          treeId: item.tree_id ?? item.tree ?? null,
+          notes: item.note ?? item.notes ?? null,
+        }))
+      );
+    } finally {
       setLoading(false);
-    };
+    }
+  }, [limit, userId]);
 
-    fetchHistory();
-    return () => {
-      ignore = true;
-    };
-  }, [userId]);
+  useEffect(() => {
+    void fetchHistory();
+  }, [fetchHistory]);
 
-  return { history, loading };
+  return { items, loading, error, reload: fetchHistory };
 };
 
 export default useScanHistory;

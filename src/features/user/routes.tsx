@@ -1,15 +1,21 @@
-import Detail from './pages/Detail';
-import Main from './pages/Main';
-import Profile from './pages/Profile';
-import Scan from './pages/Scan';
-import ScanHistory from './pages/ScanHistory';
+import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
+
+import { withPageSuspense } from '@/components/page-loader';
+
+const ReportHistory = lazy(() => import('./pages/ReportHistory'));
+const NewReport = lazy(() => import('./pages/NewReport'));
+
+const historyRedirect = <Navigate to="/reports/history" replace />;
 
 export const userRoutes = [
-  { path: '/main', element: <Main /> },
-  { path: '/profile', element: <Profile /> },
-  { path: '/scan', element: <Scan /> },
-  { path: '/scan-history', element: <ScanHistory /> },
-  { path: '/detail/:id', element: <Detail /> },
+  { path: '/reports/history', element: withPageSuspense(<ReportHistory />) },
+  { path: '/main', element: historyRedirect },
+  { path: '/profile', element: historyRedirect },
+  { path: '/reports/new', element: withPageSuspense(<NewReport />) },
+  { path: '/detail/:id', element: historyRedirect },
+  { path: '/scan', element: historyRedirect },
+  { path: '/scan/history', element: historyRedirect },
 ];
 
 export default userRoutes;

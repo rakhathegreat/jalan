@@ -1,11 +1,6 @@
 import { useMemo } from 'react';
-import {
-  calculateRoadLength,
-  formatDistance,
-  formatMaxSpeed,
-  parseBoolean,
-  parseNumericValue,
-} from '../mapHelpers';
+import { formatDistance, formatMaxSpeed, parseBoolean, parseNumericValue } from '../mapHelpers';
+import { calculateRoadLength } from '../mapGeoHelpers';
 import type { RoadRow } from '../types';
 
 export type RoadDetails = {
