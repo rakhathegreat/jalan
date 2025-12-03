@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import LogoutButton from '@features/user/components/LogoutButton';
 import { useAuthUser } from '@features/user/hooks/useAuthUser';
 import { useReportHistory } from '@features/user/hooks/useReportHistory';
 import {
@@ -68,6 +69,7 @@ const ReportHistory = () => {
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Memuat...' : 'Segarkan'}
             </Button>
+            <LogoutButton className="flex-1 sm:flex-none" />
           </div>
         </div>
 

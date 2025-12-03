@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Compass, Crosshair, MapPin, Send } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import LogoutButton from '@features/user/components/LogoutButton';
 import { useAuthUser } from '@features/user/hooks/useAuthUser';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -143,6 +144,7 @@ const NewReport = () => {
                 Lihat riwayat
               </Link>
             </Button>
+            <LogoutButton className="flex-1 sm:flex-none" />
           </div>
         </div>
 
